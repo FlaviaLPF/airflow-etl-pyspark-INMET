@@ -1,0 +1,14 @@
+--Criar schema stage (caso ainda não exista)
+CREATE SCHEMA IF NOT EXISTS stage;
+
+CREATE OR REPLACE TABLE stage.dim_cidades (
+    WMO VARCHAR ,
+    UF VARCHAR,
+    ESTACAO VARCHAR,
+    REGIAO VARCHAR,    
+    LATITUDE DECIMAL(11,8),
+    LONGITUDE DECIMAL(11,8),
+    ALTITUDE DECIMAL(9,2),
+    DATA_FUNDACAO DATE
+);
+

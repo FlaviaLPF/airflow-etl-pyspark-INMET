@@ -1,0 +1,156 @@
+version: "3.8"
+
+services:
+  hdfs-namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-namenode
+    environment:
+      - CLUSTER_NAME=hadoop-cluster
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs-namenode:9000
+    ports:
+      - "9870:9870"
+    volumes:
+      - hdfs-nn-data:/hadoop/dfs/name
+      - ./spark-apps:/opt/spark-apps
+    networks:
+      - hadoopnet
+
+  hdfs-datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-datanode
+    depends_on:
+      - hdfs-namenode
+    environment:
+      - CLUSTER_NAME=hadoop-cluster
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs-namenode:9000
+      - HDFS_CONF_dfs_replication=1
+    volumes:
+      - hdfs-dn-data:/hadoop/dfs/data
+      - ./spark-apps:/opt/spark-apps
+    networks:
+      - hadoopnet
+
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: my-spark:3.2.1
+    #image: bitnami/spark:3.2.1
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    volumes:
+      - ./spark-apps:/opt/spark-apps
+      #- ./spark-events:/tmp/spark-events
+    networks:
+      - hadoopnet
+
+  spark-worker:
+    image: my-spark:3.2.1
+    #image: bitnami/spark:3.2.1
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./spark-apps:/opt/spark-apps
+    networks:
+      - hadoopnet
+      
+#  spark-history-server:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.history
+#    container_name: spark-history
+#    ports:
+#      - "18080:18080"
+#    volumes:
+#      - ./spark-events:/tmp/spark-events
+#      - ./spark-events/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+#    environment:
+#      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=file:/tmp/spark-events
+#    command: ["/opt/spark/sbin/start-history-server.sh"]
+#    networks:
+#      - hadoopnet
+
+  airflow-db:
+    image: postgres:13
+    container_name: airflow-db
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - hadoopnet
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-webserver
+    restart: always
+    depends_on:
+      - airflow-db
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+      - AIRFLOW__WEBSERVER__SECRET_KEY=supersecretkey
+      - AIRFLOW_UID=50000
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./spark-apps:/opt/spark-apps
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./hadoop-config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+    networks:
+      - hadoopnet
+    command: >
+      bash -c "
+        while ! pg_isready -h airflow-db -p 5432 -U airflow; do sleep 2; done &&
+        airflow db upgrade &&
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
+        airflow webserver"
+  
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow-scheduler
+    restart: always
+    depends_on:
+      - airflow-webserver
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=supersecretkey
+      - AIRFLOW_UID=50000
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./spark-apps:/opt/spark-apps
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./hadoop-config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+    networks:
+      - hadoopnet
+    command: >
+      bash -c "
+        while ! airflow db check 2>/dev/null; do echo 'Waiting for DB init...'; sleep 2; done &&
+        airflow scheduler"
+
+volumes:
+  postgres_data:
+  hdfs-nn-data:
+  hdfs-dn-data:
+
+networks:
+  hadoopnet:

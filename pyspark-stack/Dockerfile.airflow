@@ -1,0 +1,50 @@
+FROM apache/airflow:2.7.2-python3.8
+
+USER root
+
+# ----------------------------
+#  Install OS build deps needed by Python packages
+# ----------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential gcc g++ python3-dev \
+      libkrb5-dev krb5-user \
+      libsasl2-dev libldap2-dev \
+      libssl-dev libxml2-dev libxslt1-dev zlib1g-dev \
+      libffi-dev curl wget ca-certificates vim && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
+
+# ----------------------------
+#  Install Java and Spark
+# ----------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-11-jdk curl wget vim && \
+    curl -fSL https://archive.apache.org/dist/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz \
+    | tar -xz -C /opt/ && \
+    mv /opt/spark-3.2.1-bin-hadoop3.2 /opt/spark
+
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV SPARK_HOME=/opt/spark
+ENV PATH="${PATH}:${SPARK_HOME}/bin"
+
+# ----------------------------
+#  Install Hadoop CLI (HDFS)
+# ----------------------------
+RUN wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz && \
+    tar -xvzf hadoop-3.3.6.tar.gz -C /opt/ && \
+    ln -s /opt/hadoop-3.3.6 /opt/hadoop && \
+    rm hadoop-3.3.6.tar.gz && \
+    echo 'export HADOOP_HOME=/opt/hadoop' >> ~/.bashrc && \
+    echo 'export PATH=$PATH:/opt/hadoop/bin' >> ~/.bashrc
+
+ENV HADOOP_HOME=/opt/hadoop
+ENV PATH="${PATH}:${HADOOP_HOME}/bin"
+
+# ----------------------------
+# 🔁Switch back to airflow user and install Python reqs
+# ----------------------------
+USER airflow
+COPY requirements.txt /
+RUN pip install --no-cache-dir -r /requirements.txt
