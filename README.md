@@ -1,22 +1,28 @@
 ## Data Engineer INMET Project
----
+
 
 
 ### Scope of Works
----
 
 
-This is an individual data engineering project that builds an end-to-end
+
+This is an individual Data Engineering project that builds an end-to-end
 pipeline to create a data warehouse in Snowflake. Some processes run
 inside containers, created and managed by Docker Desktop, specifically
 running Apache Airflow, HDFS, and Apache Spark. Other processes run in
 Snowflake, with Airflow serving as the orchestrator for all of them.
 
-<img src="img/architecture.png" style="width:6.59583in;height:3.06944in" />
+<p align="center">
+  <img src="img/architecture.png" alt="" style="width:100%; height:auto;">
+</p>
+
 
 The project flow diagram is described in this picture.
 
-<img src="img/workflow.png" style="width:6.59583in;height:6.51806in" />
+<p align="center">
+  <img src="img/workflow.png" alt="" style="width:100%; height:auto;">
+</p>
+
 
 The main thing of this project is you process raw meteorological data
 files from INMET (source: https://portal.inmet.gov.br/dadoshistoricos ).
@@ -31,7 +37,7 @@ transform the INMET raw file. The remaining code created in the project
 is in the Airflow DAG.
 
 ### Data
----
+
 
 
 The data downloaded from the INMET website are in Zip format. They were
@@ -40,7 +46,7 @@ Each file contains historical meteorological data for a specific city,
 as well as some data from its weather stations.
 
 ### DOCKER
----
+
 
 
 Docker, in this project, is responsible for creating the entire
@@ -51,7 +57,7 @@ data processing system). Airflow uses all of these resources to execute
 the process as a whole.
 
 ### HDFS
----
+
 
 
 HDFS is used to store the raw files (in the input folder), formatted as
@@ -60,7 +66,7 @@ Parquet format. The PySpark job (executed by Apache Airflow) creates the
 stage folder, where the Parquet files will be stored.
 
 ### Snowflake
----
+
 
 
 Snowflake is used to store the stage tables and to build the data
@@ -74,7 +80,7 @@ the analitic tables in data warehouse. The queries include aggregations
 and data counts.
 
 ### Airflow
----
+
 
 
 In the Airflow script we run — the PySpark job and DAG — it is necessary
@@ -89,46 +95,59 @@ Specifically, the operators are listed in the table below:
 |----|----|
 | Run Pysparkjob | BashOperator |
 | Reading files, writing to parquet and pandas files dataframes, executing functions | PythonOperator |
-| marking | EmptyOperator |
+| Marking | EmptyOperator |
 | Run query | SnowflakeOperator |
 
 <span class="mark">The operators mentioned in the table above are based
 on Apache Airflow version 3.8.x.</span>
 
-From this script, we make our graph like the image below.
+From this script, we make our graph like the image below:
 
-<img src="img/dag-airflow.png" style="width:6.59583in;height:2.91458in" />
+<p align="center">
+  <img src="img/airflow-dags.png" alt="" style="width:100%; height:auto;">
+</p>
 
 Below is a preview of the input .CSV file:
 
-<img src="img/excel-input.png" style="width:6.59583in;height:2.43611in" />
+<p align="center">
+  <img src="img/excel-input.png" alt="" style="width:100%; height:auto;">
+</p>
 
 As a result of running the complete process, we can view the tables
 created in the data warehouse below in Snowflake:
 
 dim_cidades_atributos (schema:analitic):
-<img src="img/snwoflake1.png" style="width:6.59583in;height:3.01319in" />
+
+<p align="center">
+  <img src="img/snowflake-1.png" alt="" style="width:100%; height:auto;">
+</p>
 
 cidade_kpis_mensal (schema:analitic):
 
-<img src="img/snowflak2.png" style="width:6.59583in;height:3.01389in" />
+<p align="center">
+  <img src="img/snowflake-2.png" alt="" style="width:100%; height:auto;">
+</p>
 
 Fato_previsos_dia (schema:analitic):
 
-<img src="img/snowflake3.png" style="width:6.59583in;height:3.0125in" />
-
+<p align="center">
+  <img src="img/snowflake-3.png" alt="" style="width:100%; height:auto;">
+</p>
  
 
 ### Entity Relationship Diagram
----
+
 
 
 The relationship between the tables created in the data warehouse is
-shown in the ERD
-below.<img src="img/erd.png" style="width:6.59583in;height:6.64306in" />
+shown in the ERD below.
+
+<p align="center">
+  <img src="img/erd.png" alt="" style="width:100%; height:auto;">
+</p>
 
 ### Conclusion
----
+
 
 
 This project implements an ETL (Extract, Load and Transform) for a
