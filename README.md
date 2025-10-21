@@ -114,7 +114,7 @@ Below is a preview of the input .CSV file:
 </p>
 
 As a result of running the complete process, we can view the tables
-created in the data warehouse below in Snowflake:
+created in the data warehouse below in Snowflake.
 
 dim_cidades_atributos (schema:analitic):
 
@@ -167,7 +167,7 @@ in this small project are:
   create external tables and execute queries.
 
 - Reading, processing, and writing Parquet files in HDFS using Apache
-  Spark and PySpark language.
+  Spark and PySpark language job.
 
 - Defining relationships between data warehouse tables that can be used
   by end users.
